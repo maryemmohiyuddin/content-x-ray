@@ -7,13 +7,13 @@ import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { AiOutlineUpload } from "react-icons/ai";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { v4 as uuidv4 } from "uuid";
 
 function Upload() {
   const [url, setUrl] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const supabase = createClientComponentClient();
-  const [maxFiles, setMaxFiles] = useState(5);
   const [urlDisabled, setUrlDisabled] = useState(false);
   const [fileInputDisabled, setFileInputDisabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,28 +22,14 @@ function Upload() {
     setUrl(e.target.value);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (files.length >= 5) {
-        alert("You can only select up to 5 files.");
-      } else {
-        setFiles((prevFiles) => [...prevFiles, selectedFile]);
-        updateMaxFilesLimit();
-      }
-    }
-    setUrlDisabled(!!selectedFile);
-    setFileInputDisabled(false);
-  };
-
-  const updateMaxFilesLimit = () => {
-    const remainingCapacity = 5 - files.length;
-    setMaxFiles(remainingCapacity);
-  };
-
-  useEffect(() => {
-    updateMaxFilesLimit();
-  }, [files]);
+const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const selectedFiles = e.target.files;
+  if (selectedFiles && selectedFiles.length > 0) {
+    setFiles((prevFiles) => [...prevFiles, ...Array.from(selectedFiles)]);
+  }
+  setUrlDisabled(!!selectedFiles);
+  setFileInputDisabled(false);
+};
 
   const handleRemoveFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
@@ -53,39 +39,38 @@ function Upload() {
     e.preventDefault();
     console.log("URL to analyze:", url);
   };
+const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
+  if (files.length > 0) {
+    console.log("Files to analyze:", files);
+    try {
+      setLoading(true);
 
-  const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (files.length > 0) {
-      console.log("Files to analyze:", files);
-      try {
-        setLoading(true);
+      for (const file of files) {
+        console.log("filename", file.name);
+        const fileId = uuidv4(); // Generate a UUID for the file
+        const { data, error } = await supabase.storage
+          .from("content-files")
+          .upload(`/${fileId}_${file.name}`, file); // Append the UUID to the file name
 
-        for (const file of files) {
-          console.log("filename", file.name);
-          const { data, error } = await supabase.storage
-            .from("content-files")
-            .upload(`/${file.name}`, file);
-
-          if (error) {
-            toast.error(error.message + " " + file.name);
-            console.error("Error uploading file:", error);
-          } else {
-            toast.success("File uploaded successfully" + " " + file.name);
-            console.log("File uploaded successfully:", data);
-            setUploadedFiles((prevFiles) => [...prevFiles, data.path]);
-          }
+        if (error) {
+          toast.error(error.message + " " + file.name);
+          console.error("Error uploading file:", error);
+        } else {
+          toast.success("File uploaded successfully" + " " + file.name);
+          console.log("File uploaded successfully:", data);
+          setUploadedFiles((prevFiles) => [...prevFiles, data.path]);
         }
-      } catch (error) {
-        toast.error("Error during file upload");
-        console.error("Error during file upload:", error);
-      } finally {
-        setLoading(false);
-        setFiles([]);
       }
+    } catch (error) {
+      toast.error("Error during file upload");
+      console.error("Error during file upload:", error);
+    } finally {
+      setLoading(false);
+      setFiles([]);
     }
-  };
-
+  }
+};
   return (
     <div className="text-black">
       <div className="bg-white px-10 py-10 rounded-lg">
@@ -170,6 +155,7 @@ function Upload() {
                         onChange={handleFileChange}
                         className="hidden"
                         accept=".jpg,.jpeg,.png,.pdf,.docx,.txt"
+                        multiple
                         disabled={fileInputDisabled}
                       />
                     </label>
@@ -214,7 +200,7 @@ function Upload() {
                 <h2 className="text-[14px] w-full mb-2 mt-5 font-medium">
                   Selected Files
                 </h2>
-                <ul className="border rounded-xl w-full space-y-2 px-3 py-2">
+                <ul className="border rounded-xl w-full space-y-2 px-3 py-2 max-h-[200px] overflow-auto">
                   {files.map((file, index) => (
                     <li
                       key={index}

@@ -2,7 +2,7 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
-import Upload from "../../components/upload";
+import Settings from "../../components/settings";
 import Navbar from "../../components/navbar";
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -21,10 +21,10 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className="h-screen bg-gray-100">
       <Navbar />
       <div className="mx-40 my-24">
-        <Upload />
+        <Settings />
       </div>
     </div>
   );
