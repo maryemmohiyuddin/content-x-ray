@@ -21,6 +21,7 @@ export default function Settings() {
   const [email, setEmail] = useState("");
   const [budget, setBudget] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
