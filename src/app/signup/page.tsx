@@ -27,6 +27,9 @@ export default function Signup() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { budget: budget, phone_number: phoneNumber },
+        },
       });
 
       if (error) {
@@ -37,25 +40,15 @@ export default function Signup() {
         return;
       }
 
-      if (data && phoneNumber) {
-        const res = await supabase.from("user_profiles").insert([
-          {
-            user_id: data?.user?.id,
-            phone_number: phoneNumber,
-            budget: budget,
-          },
-        ]);
-        console.log(res.status);
-
-        if (res.status === 201) {
+     
+        if (data) {
           window.location.href = "/login";
         } else {
           setLoading(false);
-
           toast.error("Error occurred");
           return;
         }
-      }
+      
     } catch (error) {
       setLoading(false);
 
