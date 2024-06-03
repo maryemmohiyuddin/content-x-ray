@@ -40,15 +40,13 @@ export default function Signup() {
         return;
       }
 
-     
-        if (data) {
-          window.location.href = "/login";
-        } else {
-          setLoading(false);
-          toast.error("Error occurred");
-          return;
-        }
-      
+      if (data) {
+        window.location.href = "/login";
+      } else {
+        setLoading(false);
+        toast.error("Error occurred");
+        return;
+      }
     } catch (error) {
       setLoading(false);
 

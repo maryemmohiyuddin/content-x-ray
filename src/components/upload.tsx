@@ -16,61 +16,134 @@ function Upload() {
   const supabase = createClientComponentClient();
   const [urlDisabled, setUrlDisabled] = useState(false);
   const [fileInputDisabled, setFileInputDisabled] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [urlLoading, setURlLoading] = useState(false);
+  const [fileLoading, setFileLoading] = useState(false);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
   };
 
-const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const selectedFiles = e.target.files;
-  if (selectedFiles && selectedFiles.length > 0) {
-    setFiles((prevFiles) => [...prevFiles, ...Array.from(selectedFiles)]);
-  }
-  setUrlDisabled(!!selectedFiles);
-  setFileInputDisabled(false);
-};
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      setFiles((prevFiles) => [...prevFiles, ...Array.from(selectedFiles)]);
+    }
+    setUrlDisabled(!!selectedFiles);
+    setFileInputDisabled(false);
+  };
 
   const handleRemoveFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
-
-  const handleUrlSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUrlSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    console.log("URL to analyze:", url);
-  };
-const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  if (files.length > 0) {
-    console.log("Files to analyze:", files);
+    if (!url) return;
+
     try {
-      setLoading(true);
+      setURlLoading(true);
+      const user = await supabase.auth.getUser();
+      const user_id = user.data.user?.id;
 
-      for (const file of files) {
-        console.log("filename", file.name);
-        const fileId = uuidv4(); // Generate a UUID for the file
-        const { data, error } = await supabase.storage
-          .from("content-files")
-          .upload(`/${fileId}_${file.name}`, file); // Append the UUID to the file name
+      if (!user_id) {
+        toast.error("User not authenticated");
+        return;
+      }
 
-        if (error) {
-          toast.error(error.message + " " + file.name);
-          console.error("Error uploading file:", error);
-        } else {
-          toast.success("File uploaded successfully" + " " + file.name);
-          console.log("File uploaded successfully:", data);
-          setUploadedFiles((prevFiles) => [...prevFiles, data.path]);
-        }
+      const upload_id = uuidv4();
+
+      const { data, error } = await supabase.from("uploads").insert([
+        {
+          uploadid: upload_id,
+          user_id,
+          url,
+          type: "url",
+        },
+      ]);
+
+      if (error) {
+        toast.error(error.message);
+        console.error("Error saving URL:", error);
+      } else {
+        toast.success("URL saved successfully");
+        setUploadedFiles((prevFiles) => [...prevFiles, url]);
+        setUrl("");
       }
     } catch (error) {
-      toast.error("Error during file upload");
-      console.error("Error during file upload:", error);
+      toast.error("Error during URL save");
+      console.error("Error during URL save:", error);
     } finally {
-      setLoading(false);
-      setFiles([]);
+      setURlLoading(false);
     }
-  }
-};
+  };
+  const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (files.length > 0) {
+      try {
+        setFileLoading(true);
+        const user = await supabase.auth.getUser();
+        const user_id = user.data.user?.id;
+
+        if (!user_id) {
+          toast.error("User not authenticated");
+          return;
+        }
+
+        const upload_id = uuidv4(); // Generate upload_id once for this batch
+
+        for (const file of files) {
+          const fileId = uuidv4();
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from("content-files")
+              .upload(`/${fileId}_${file.name}`, file);
+
+          if (uploadError) {
+            toast.error(uploadError.message + " " + file.name);
+            console.error("Error uploading file:", uploadError);
+          } else {
+            const { data: publicUrlData } = supabase.storage
+              .from("content-files")
+              .getPublicUrl(`/${fileId}_${file.name}`);
+
+            if (publicUrlData.publicUrl) {
+              const { data: insertData, error: insertError } = await supabase
+                .from("uploads")
+                .insert([
+                  {
+                    uploadid: upload_id, // Use the same upload_id for all files
+                    user_id,
+                    url: publicUrlData.publicUrl,
+                    type: "file",
+                  },
+                ]);
+
+              if (insertError) {
+                toast.error(insertError.message + " " + file.name);
+                console.error("Error saving file URL:", insertError);
+              } else {
+                toast.success(
+                  "File uploaded and URL saved successfully: " + file.name
+                );
+                setUploadedFiles((prevFiles) => [
+                  ...prevFiles,
+                  publicUrlData.publicUrl,
+                ]);
+              }
+            } else {
+              toast.error("Error retrieving public URL: " + file.name);
+              console.error("Error retrieving public URL:", uploadData);
+            }
+          }
+        }
+      } catch (error) {
+        toast.error("Error during file upload");
+        console.error("Error during file upload:", error);
+      } finally {
+        setFileLoading(false);
+        setFiles([]);
+      }
+    }
+  };
   return (
     <div className="text-black">
       <div className="bg-white px-10 py-10 rounded-lg">
@@ -83,7 +156,7 @@ const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
             files.length > 0 ? "opacity-70 pointer-events-none" : ""
           } mb-2`}
         >
-          <form onSubmit={handleUrlSubmit} className="flex gap-3">
+          <form className="flex gap-3">
             <Input
               radius="sm"
               type="url"
@@ -103,23 +176,33 @@ const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
                   "!cursor-text",
                 ],
               }}
-              placeholder="xyz.org"
+              placeholder="https://xyz.org"
               onChange={handleUrlChange}
               labelPlacement="outside"
-              startContent={
-                <div className="pointer-events-none flex items-center">
-                  <span className="text-default-400 text-small">https://</span>
-                </div>
-              }
             />
 
             <Button
-              type="submit"
               radius="sm"
-              className="!flex !w-auto mt-2  self-end items-center justify-center bg-theme text-white"
+              type="submit"
+              className={`${
+                urlLoading ? "pointer-events-none opacity-70" : ""
+              } flex w-auto mt-2 self-end items-center justify-center bg-theme text-white ${
+                fileInputDisabled ? "opacity-40 pointer-events-none" : ""
+              }`}
+              disabled={!url}
+              onClick={handleUrlSubmit}
             >
-              <FaGears fontSize="40px" />
-              Analyze
+              {urlLoading ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                  Analyzing
+                </>
+              ) : (
+                <>
+                  <FaGears fontSize="40px" className="mr-2" />
+                  Analyze
+                </>
+              )}
             </Button>
           </form>
         </div>
@@ -163,7 +246,7 @@ const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
                       radius="sm"
                       type="submit"
                       className={`${
-                        loading ? "pointer-events-none opacity-70" : ""
+                        fileLoading ? "pointer-events-none opacity-70" : ""
                       } flex w-auto mt-2 self-end items-center justify-center bg-theme text-white ${
                         fileInputDisabled
                           ? "opacity-40 pointer-events-none"
@@ -172,7 +255,7 @@ const handleFileSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
                       disabled={files.length === 0 || fileInputDisabled}
                       onClick={handleFileSubmit}
                     >
-                      {loading ? (
+                      {fileLoading ? (
                         <>
                           <FontAwesomeIcon
                             icon={faSpinner}
