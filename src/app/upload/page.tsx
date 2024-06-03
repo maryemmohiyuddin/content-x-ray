@@ -16,10 +16,9 @@ export default function UploadPage() {
       } = await supabase.auth.getUser();
       setLoading(false);
     }
-
     getUser();
   }, []);
-   
+
   return (
     <div className="h-screen">
       <div className="h-full flex flex-col bg-gray-100">
