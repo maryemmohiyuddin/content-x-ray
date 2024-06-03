@@ -14,6 +14,9 @@ export async function middleware(req) {
   if (!authTokenCookie && req.nextUrl.pathname == "/upload") {
     return NextResponse.redirect(new URL("/login", req.url));
   }
+  if (!authTokenCookie && req.nextUrl.pathname == "/settings") {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
   if (authTokenCookie && req.nextUrl.pathname == "/login") {
     return NextResponse.redirect(new URL("/upload", req.url));
   }

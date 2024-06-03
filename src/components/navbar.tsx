@@ -25,8 +25,7 @@ function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    
-    router.push("/login");
+    window.location.href = "/login";
   };
   useEffect(() => {
     const currentRoute = window.location.pathname;

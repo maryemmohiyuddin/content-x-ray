@@ -18,10 +18,10 @@ type UpdateData = {
 };
 export default function Settings() {
   const supabase = createClientComponentClient();
+  const [initialEmail, setInitialEmail] = useState("");
   const [email, setEmail] = useState("");
   const [budget, setBudget] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
@@ -31,10 +31,12 @@ export default function Settings() {
     { label: "OpenAI", value: "OpenAI" },
     { label: "Claude", value: "Claude" },
   ];
+
   const handleSelectionChange = (keys: any) => {
     const selectedKey = Array.from(keys).join("");
     setSelectedAnimal(keys);
   };
+
   const handleUpdate = async () => {
     setLoading(true);
 
@@ -59,7 +61,11 @@ export default function Settings() {
 
       if (user) {
         setLoading(false);
-        toast.success("User updated successfully");
+        if (email !== initialEmail) {
+          toast.success("Email verification link sent to new email.");
+        } else {
+          toast.success("User updated successfully");
+        }
       } else {
         setLoading(false);
         toast.error("Error occurred");
@@ -77,24 +83,28 @@ export default function Settings() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setEmail(user?.user_metadata.email || "");
+      const userEmail = user?.email || "";
+      const newEmail = user?.new_email || "";
+
+      setEmail(userEmail);
+      setInitialEmail(newEmail);
       setBudget(user?.user_metadata.budget || "");
       setPhoneNumber(user?.user_metadata.phone_number || "");
-      console.log("user", user);
     }
 
     getUser();
   }, [supabase]);
-
   return (
-    <div className="flex space-x-10 text-black items-center h-full justify-center">
+    <div className="flex space-x-10 !text-black items-center h-full justify-center">
       <div className="w-[20%] self-start  rounded-lg   h-full">
         <ToastContainer />
         <h1 className="text-xl font-semibold mb-6">Settings</h1>
-        <ul className="list-none">
+        <ul className="list-none space-y-2">
           <li
             className={`py-2 px-3 cursor-pointer flex items-center gap-2 rounded-md ${
-              activeTab === "profile" ? "bg-theme text-white" : ""
+              activeTab === "profile"
+                ? "bg-theme text-white"
+                : "hover:bg-theme hover:bg-opacity-25 transition-all duration-150"
             }`}
             onClick={() => setActiveTab("profile")}
           >
@@ -103,7 +113,9 @@ export default function Settings() {
           </li>
           <li
             className={`py-2 px-3 cursor-pointer flex items-center gap-2 rounded-md ${
-              activeTab === "llm" ? "bg-theme text-white" : ""
+              activeTab === "llm"
+                ? "bg-theme text-white"
+                : "hover:bg-theme hover:bg-opacity-25 transition-all duration-150 "
             }`}
             onClick={() => setActiveTab("llm")}
           >
@@ -175,7 +187,7 @@ export default function Settings() {
           <>
             <h1 className="text-xl font-semibold">LLM</h1>
             <p className="text-sm">You can edit your LLM settings here.</p>
-            <form className="py-6 space-y-4">
+            <form className="py-6 !text-black space-y-4">
               <Select
                 items={selectOptions}
                 label="LLM Model"
@@ -198,8 +210,6 @@ export default function Settings() {
                 {loading ? "Saving..." : "Save"}
               </Button>
             </div>
-
-            {console.log(selectedAnimal)}
           </>
         )}
       </div>
