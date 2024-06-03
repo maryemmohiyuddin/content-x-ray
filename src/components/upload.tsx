@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Input, Button } from "@nextui-org/react";
+import { Input, Button, Card } from "@nextui-org/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FaGears } from "react-icons/fa6";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
@@ -18,6 +18,7 @@ function Upload() {
   const [fileInputDisabled, setFileInputDisabled] = useState(false);
   const [urlLoading, setURlLoading] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
+  const [aiResponse, setAIResponse] = useState<string>("");
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -35,6 +36,54 @@ function Upload() {
   const handleRemoveFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
+  const handleOpenAICall = async (url: string) => {
+    const requestBody = {
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are a website analyzer. You will be provided with a URL of a website enclosed in tag. You will have to generate a report based on the points enclosed in <points> tag. Your response will be in JSON and the template for your JSON format will be:
+
+        {
+          "report": "Your response in paragraphic form"
+        }
+
+        Use only one key in your response that will be 'report' and it's value will be a paragraphic response of your report.
+                
+      <points>
+          1. *Accessibility and readability* Tell in a paragraph that how difficult is the document to read, understand and what level of English would someone need to have in order to understand it?
+      2. *Eectiveness and sentiment* Tell in a paragraph that how persuasive is the document, how successful is it at conveying the message it needs to in simple terms? How well does the document use metaphor in a way that draws the reader in? What is missing from the document that should be there, what is in the document that is unnecessary or ineffective.
+      3. Structure. Tell in a paragraph that what visuals could be used to improve readability and comprehension? How are the ones currently in the document working? Are they useful or could they be clearer?
+
+      </points>
+      
+      `,
+        },
+        {
+          role: "user",
+          content: `<url>${url}/</url>`,
+        },
+      ],
+    };
+
+    const options = {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    };
+    try {
+      const response = await fetch("/api/openai_call", options);
+      if (response.ok) {
+        const data = await response.json();
+        const paragraph=JSON.parse(data.report);
+        setAIResponse(paragraph.report);
+      } else {
+        console.error("Failed to call OpenAI:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
   const handleUrlSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!url) return;
@@ -64,9 +113,9 @@ function Upload() {
         toast.error(error.message);
         console.error("Error saving URL:", error);
       } else {
-        toast.success("URL saved successfully");
+        await handleOpenAICall(url);
         setUploadedFiles((prevFiles) => [...prevFiles, url]);
-        setUrl("");
+        // setUrl("");
       }
     } catch (error) {
       toast.error("Error during URL save");
@@ -110,7 +159,7 @@ function Upload() {
                 .from("uploads")
                 .insert([
                   {
-                    uploadid: upload_id, // Use the same upload_id for all files
+                    uploadid: upload_id, 
                     user_id,
                     url: publicUrlData.publicUrl,
                     type: "file",
@@ -207,6 +256,13 @@ function Upload() {
           </form>
         </div>
         <p className="text-xs font-light mb-5">Enter your website URL here.</p>
+        {aiResponse && (
+          <div className="text-sm shadow-md overflow-y-auto px-7 py-5 my-3 rounded-lg">
+            <h1 className="font-medium mb-2">Report:</h1>
+            <p>{aiResponse}</p>
+          </div>
+        )}
+
         <div>
           <div className="">
             <div
