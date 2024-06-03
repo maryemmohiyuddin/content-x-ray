@@ -19,7 +19,7 @@ export default function UploadPage() {
 
     getUser();
   }, []);
-
+   
   return (
     <div className="h-screen">
       <div className="h-full flex flex-col bg-gray-100">
