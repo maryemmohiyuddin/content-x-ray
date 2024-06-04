@@ -8,6 +8,7 @@ import { AiOutlineUpload } from "react-icons/ai";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { v4 as uuidv4 } from "uuid";
+import OpenAI from "openai";
 
 function Upload() {
   const [url, setUrl] = useState("");
@@ -19,6 +20,13 @@ function Upload() {
   const [urlLoading, setURlLoading] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
   const [aiResponse, setAIResponse] = useState<string>("");
+  const [aiAccessibility, setAIAccessibility] = useState<string>("");
+  const [aiEffectiveness, setAIEffectiveness] = useState<string>("");
+  const [aiStructure, setAIStructure] = useState<string>("");
+  const openai = new OpenAI({
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -42,20 +50,48 @@ function Upload() {
       messages: [
         {
           role: "system",
-          content: `You are a website analyzer. You will be provided with a URL of a website enclosed in tag. You will have to generate a report based on the points enclosed in <points> tag. Your response will be in JSON and the template for your JSON format will be:
+          content: `You are a website analyzer. You will be provided with a URL of a website enclosed in <url> tag. You will have to generate a report based on the given in <structure> tag. In the <structure> tag we are using 'recommendations' too, but those recommendations are only instructions for you and should not be a part of response. Also we are using 'description' in the <structure> tag, we donot need that description in our response, it is for your instrucctions only. DONOT write any Summary, just follow the structure given.
+                          
+                    <structure>
 
-        {
-          "report": "Your response in paragraphic form"
-        }
+                    ---## AI Content X-Ray Report### 
+                    Introduction
+                    The AI Content X-Ray tool provides an in-depth analysis of documents or web pages, offering insights and potential improvements across three key areas: Accessibility and Readability, Effectiveness and Sentiment, and Structure.
+                    ### 1. Accessibility and Readability####
+                    Description
+                    Accessibility and readability focus on how easily a document can be read and understood by its audience. This dimension assesses the complexity of the language used and the required proficiency level in English.
+                    #### Key Elements
+                    - **Readability Level**: How challenging the text is to read and comprehend.
+                    - **Language Complexity**: The sophistication of the vocabulary and sentence structure.
+                    - **User Understanding**: The level of English proficiency needed for the reader to fully grasp the content.
+                    #### Recommendations
+                    - Simplify complex sentences and use common vocabulary to enhance understanding.
+                    - Use readability tools to gauge the text's difficulty and adjust accordingly.
+                    - Incorporate clear headings and subheadings to guide the reader.
+                    ### 2. Effectiveness and Sentiment
+                    #### Description
+                    Effectiveness and sentiment measure how persuasive and impactful the document is. This dimension evaluates how well the message is conveyed and the emotional response it elicits from the reader.
+                    #### Key Elements
+                    - **Persuasiveness**: The ability of the document to convince and engage the reader.
+                    - **Message Clarity**: How clearly the main ideas are presented.
+                    - **Emotional Impact**: The use of metaphors and other rhetorical devices to evoke emotions.
 
-        Use only one key in your response that will be 'report' and it's value will be a paragraphic response of your report.
-                
-      <points>
-          1. *Accessibility and readability* Tell in a paragraph that how difficult is the document to read, understand and what level of English would someone need to have in order to understand it?
-      2. *Eectiveness and sentiment* Tell in a paragraph that how persuasive is the document, how successful is it at conveying the message it needs to in simple terms? How well does the document use metaphor in a way that draws the reader in? What is missing from the document that should be there, what is in the document that is unnecessary or ineffective.
-      3. Structure. Tell in a paragraph that what visuals could be used to improve readability and comprehension? How are the ones currently in the document working? Are they useful or could they be clearer?
-
-      </points>
+                    #### Recommendations
+                    - Strengthen key arguments with evidence and clear examples.
+                    - Ensure the message is concise and to the point, avoiding unnecessary jargon.
+                    - Use metaphors and analogies effectively to create a stronger emotional connection.
+                    ### 3. Structure
+                    #### Description
+                    The structure dimension examines the visual and organizational aspects of the document. It focuses on how visuals and layout contribute to readability and comprehension.
+                    #### Key Elements
+                    - **Visual Aids**: The use of images, graphs, and charts to support the text.
+                    - **Document Layout**: The overall organization and flow of the content.
+                    - **Clarity of Visuals**: How well the visual elements aid in understanding the text.
+                    #### Recommendations
+                    - Incorporate relevant visuals to break up text and illustrate key points.
+                    - Use bullet points and numbered lists for better organization.
+                    - Ensure that all visual elements are clear and directly related to the content they support.
+                    </structure>
       
       `,
         },
@@ -72,10 +108,21 @@ function Upload() {
     };
     try {
       const response = await fetch("/api/openai_call", options);
+      console.log("response", response);
+
       if (response.ok) {
         const data = await response.json();
-        const paragraph=JSON.parse(data.report);
-        setAIResponse(paragraph.report);
+        console.log("data", data.report);
+        // const paragraph = JSON.parse(data.report).report;
+        // console.log("data", JSON.parse(data.report).report);
+        // setAIAccessibility(
+        //   JSON.parse(data.report).report["Accessibility and readability"]
+        // );
+        // setAIEffectiveness(
+        //   JSON.parse(data.report).report["Effectiveness and sentiment"]
+        // );
+        // setAIStructure(JSON.parse(data.report).report["Structure"]);
+        setAIResponse(data.report);
       } else {
         console.error("Failed to call OpenAI:", response.statusText);
       }
@@ -128,6 +175,17 @@ function Upload() {
     e.preventDefault();
     if (files.length > 0) {
       try {
+        let vectorStore = await openai.beta.vectorStores.create({
+          name: "Financial Statement",
+        });
+
+        const upload = await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+          vectorStore.id,
+          { files: files }
+        );
+        console.log("upload", upload);
+        console.log("files", files);
+
         setFileLoading(true);
         const user = await supabase.auth.getUser();
         const user_id = user.data.user?.id;
@@ -137,53 +195,13 @@ function Upload() {
           return;
         }
 
-        const upload_id = uuidv4(); // Generate upload_id once for this batch
+        const formData = new FormData();
 
         for (const file of files) {
-          const fileId = uuidv4();
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage
-              .from("content-files")
-              .upload(`/${fileId}_${file.name}`, file);
-
-          if (uploadError) {
-            toast.error(uploadError.message + " " + file.name);
-            console.error("Error uploading file:", uploadError);
-          } else {
-            const { data: publicUrlData } = supabase.storage
-              .from("content-files")
-              .getPublicUrl(`/${fileId}_${file.name}`);
-
-            if (publicUrlData.publicUrl) {
-              const { data: insertData, error: insertError } = await supabase
-                .from("uploads")
-                .insert([
-                  {
-                    uploadid: upload_id, 
-                    user_id,
-                    url: publicUrlData.publicUrl,
-                    type: "file",
-                  },
-                ]);
-
-              if (insertError) {
-                toast.error(insertError.message + " " + file.name);
-                console.error("Error saving file URL:", insertError);
-              } else {
-                toast.success(
-                  "File uploaded and URL saved successfully: " + file.name
-                );
-                setUploadedFiles((prevFiles) => [
-                  ...prevFiles,
-                  publicUrlData.publicUrl,
-                ]);
-              }
-            } else {
-              toast.error("Error retrieving public URL: " + file.name);
-              console.error("Error retrieving public URL:", uploadData);
-            }
-          }
+          formData.append("files", file);
         }
+
+        // await handleAnalyzeButtonClick(formData);
       } catch (error) {
         toast.error("Error during file upload");
         console.error("Error during file upload:", error);
@@ -193,6 +211,27 @@ function Upload() {
       }
     }
   };
+
+  async function handleAnalyzeButtonClick(formData: FormData) {
+    try {
+      // Create a vector store including our two files.
+      // const response = await fetch("/api/create_vector_store", {
+      //   method: "POST",
+      //   body: formData,
+      //   headers: {
+      //     "Content-Type": "multipart/form-data", // Ensure this is set correctly
+      //   },
+      // });
+      // if (!response.ok) {
+      //   throw new Error("Failed to create vector store");
+      // }
+      // const responseData = await response.json();
+      // console.log("Vector Store ID:", responseData.vectorStoreId);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  }
+
   return (
     <div className="text-black">
       <div className="bg-white px-10 py-10 rounded-lg">
@@ -258,8 +297,13 @@ function Upload() {
         <p className="text-xs font-light mb-5">Enter your website URL here.</p>
         {aiResponse && (
           <div className="text-sm shadow-md overflow-y-auto px-7 py-5 my-3 rounded-lg">
-            <h1 className="font-medium mb-2">Report:</h1>
-            <p>{aiResponse}</p>
+            <h1 className="font-medium mb-2 text-wrap break-all">Report:</h1>
+            <pre>{aiResponse}</pre>
+            <p>{aiAccessibility}</p>
+            <br />
+            <p>{aiEffectiveness}</p>
+            <br />
+            <pre>{aiStructure}</pre>
           </div>
         )}
 

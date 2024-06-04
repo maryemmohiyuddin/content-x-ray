@@ -5,23 +5,30 @@ const openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY });
 
 export async function POST(request: NextRequest) {
   try {
-    let requestData = await request.json();
-
-    console.log(requestData);
-
-    const completion = await openai.chat.completions.create({
-      messages: requestData.messages,
-      model: requestData.model,
-      response_format: { type: "json_object" }, 
+    console.log(await request.body);
+    let vectorStore = await openai.beta.vectorStores.create({
+      name: "Financial Statement",
     });
 
-    const aiResponse = completion.choices[0].message.content;
+    // const upload = await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+    //   vectorStore.id,
+    //   { files: files }
+    // );
+    // console.log("upload", upload);
+    // console.log("files", files);
 
-    console.log("AI Response:", aiResponse);
+    // console.log("request", request.body);
+    // console.log("request", request.body);
 
-    return new Response(JSON.stringify({ report: aiResponse }), {
-      status: 200,
-    });
+    // let vectorStore = await openai.beta.vectorStores.create({
+    //   name: "Financial Statement",
+    // });
+
+    // const upload = await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+    //   vectorStore.id,
+    //   { files: files }
+    // );
+    return new Response("Files uploaded successfully", { status: 200 });
   } catch (error) {
     console.error("Error:", error);
     return new Response("Internal Server Error", { status: 500 });

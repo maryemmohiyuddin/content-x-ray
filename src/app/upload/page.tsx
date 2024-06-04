@@ -23,7 +23,7 @@ export default function UploadPage() {
     <div className="h-screen">
       <div className="h-full flex flex-col bg-gray-100">
         <Navbar />
-        <div className="mx-40 my-24">
+        <div className="px-40 py-24 bg-gray-100">
           <Upload />
         </div>
       </div>
