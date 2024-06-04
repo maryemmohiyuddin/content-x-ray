@@ -14,8 +14,6 @@ export async function POST(request: NextRequest) {
 
     const aiResponse = completion.choices[0].message.content;
 
-    console.log("AI Response:", aiResponse);
-
     return new Response(JSON.stringify({ report: aiResponse }), {
       status: 200,
     });
