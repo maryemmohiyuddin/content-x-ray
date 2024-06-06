@@ -8,7 +8,8 @@ import { AiOutlineUpload } from "react-icons/ai";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { v4 as uuidv4 } from "uuid";
-import OpenAI from "openai";
+import axios from "axios";
+import { FaRegFilePdf } from "react-icons/fa";
 
 function Upload() {
   const [url, setUrl] = useState("");
@@ -19,13 +20,14 @@ function Upload() {
   const [fileInputDisabled, setFileInputDisabled] = useState(false);
   const [urlLoading, setURlLoading] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
-  const [aiResponse, setAIResponse] = useState<string>("");
+  const [pdfLoading, setPDFLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | undefined>("");
+  const [userID, setUserID] = useState<string | undefined>("");
+  const [aiResponse, setAIResponse] = useState<string | undefined>("");
+  const [pdfLink, setPDFLink] = useState<string | undefined>("");
   const [fileAIResponse, setFileAIResponse] = useState<string>("");
-
-  const openai = new OpenAI({
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true,
-  });
+  const [urlUploadId, setUrlUploadId] = useState<string>("");
+  const [fileUploadId, setFileUploadId] = useState<string>("");
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -43,86 +45,38 @@ function Upload() {
   const handleRemoveFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
-  const handleOpenAICall = async (url: string) => {
+
+  const updateSupabase = async (upload_id: String, report: any) => {
+    try {
+      const res = await supabase
+        .from("uploads")
+        .update({ report: report })
+        .eq("uploadid", upload_id);
+
+      if (!res) {
+        console.error("Error updating Supabase:");
+      } else {
+      }
+    } catch (error) {
+      console.error("Error updating Supabase:", error);
+    }
+  };
+
+  const handleOpenAICall = async (url: string, upload_id: String) => {
     const requestBody = {
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a website analyzer. You will be provided with a URL of a website enclosed in <url> tag. You will have to generate a report based on the given in <structure> tag. In the <structure> tag we are using 'recommendations' too, but those recommendations are only instructions for you and should not be a part of response. Also we are using 'description' in the <structure> tag, we donot need that description in our response, it is for your instructions only. The content under the headings under key elements are just instructions for the response. DONOT write any Summary, just follow the structure given. DONOT use html or any other symbols at the starting or at the end. Remove the heading 'Key Elements' from response. All of your response wil be in html tags. Follow the instructions in the <formatting> tag for the html tag formatting of the response document. 
-                          
-                    <structure>
-                    AI Content X-Ray Report
-                    Introduction
-                    The AI Content X-Ray tool provides an in-depth analysis of documents or web pages, offering insights and potential improvements across three key areas: Accessibility and Readability, Effectiveness and Sentiment, and Structure.
-                    1. Accessibility and Readability
-                    Description
-                    Accessibility and readability focus on how easily a document can be read and understood by its audience. This dimension assesses the complexity of the language used and the required proficiency level in English.
-                    Key Elements
-                    - Readability Level: How challenging the text is to read and comprehend.
-                    - Language Complexity: The sophistication of the vocabulary and sentence structure.
-                    - User Understanding: The level of English proficiency needed for the reader to fully grasp the content.
-                    Recommendations
-                    - Simplify complex sentences and use common vocabulary to enhance understanding.
-                    - Use readability tools to gauge the text's difficulty and adjust accordingly.
-                    - Incorporate clear headings and subheadings to guide the reader.
-                    2. Effectiveness and Sentiment
-                    Description
-                    Effectiveness and sentiment measure how persuasive and impactful the document is. This dimension evaluates how well the message is conveyed and the emotional response it elicits from the reader.
-                    Key Elements
-                    - Persuasiveness: The ability of the document to convince and engage the reader.
-                    - Message Clarity: How clearly the main ideas are presented.
-                    - Emotional Impact: The use of metaphors and other rhetorical devices to evoke emotions.
-
-                    Recommendations
-                    - Strengthen key arguments with evidence and clear examples.
-                    - Ensure the message is concise and to the point, avoiding unnecessary jargon.
-                    - Use metaphors and analogies effectively to create a stronger emotional connection.
-                    3. Structure
-                    Description
-                    The structure dimension examines the visual and organizational aspects of the document. It focuses on how visuals and layout contribute to readability and comprehension.
-                    Key Elements
-                    - Visual Aids: The use of images, graphs, and charts to support the text.
-                    - Document Layout: The overall organization and flow of the content.
-                    - Clarity of Visuals: How well the visual elements aid in understanding the text.
-                    Recommendations
-                    - Incorporate relevant visuals to break up text and illustrate key points.
-                    - Use bullet points and numbered lists for better organization.
-                    - Ensure that all visual elements are clear and directly related to the content they support.
-                    </structure>
-
-                    <formatting>
-                 The tags in which you need to write your response are given below:
-                 ***Start from the <h1> tag***
-                1-AI Content X-Ray Report:should be inside <h1>tag
-                2-Introduction:should be inside <h2> tag
-                3-The content in introduction should be in <p> tag.
-                4-Headings with numbers should be in <h3> tag.
-                6-Headings inside key elements should be in <h4> tag.
-                5-The response under those headings should be inside <p> tag.
-                    </formatting>
-      
-      `,
-        },
-        {
-          role: "user",
-          content: `<url>${url}/</url>`,
-        },
-      ],
+      url: url,
     };
-
     const options = {
       method: "POST",
       body: JSON.stringify(requestBody),
     };
     try {
-      const response = await fetch("/api/openai_call", options);
-      console.log("response", response);
+      const response = await fetch("/api/chat_completion", options);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("data", data.report);
         setAIResponse(data.report);
+        await updateSupabase(upload_id, data.report);
       } else {
         console.error("Failed to call OpenAI:", response.statusText);
       }
@@ -131,37 +85,118 @@ function Upload() {
     }
   };
 
+  const createPdfAsync = async (report: string, upload_id: string) => {
+    try {
+      setPDFLoading(true);
+      const { data: supabaseData, error: supabaseError } = await supabase
+        .from("uploads")
+        .select("pdf")
+        .eq("uploadid", upload_id)
+        .limit(1)
+        .single();
+
+      if (supabaseError) {
+        console.error(
+          "Error fetching data from Supabase:",
+          supabaseError.message
+        );
+        setPDFLoading(false);
+        return;
+      }
+      if (!supabaseData?.pdf) {
+        const response = await axios.post(
+          "https://api.craftmypdf.com/v1/create",
+          {
+            data: { body: report, person_name: userEmail },
+            template_id: "06a77b230de5b7f6",
+            expiration: 60,
+            is_cmyk: false,
+            load_data_from: null,
+            version: 8,
+            export_type: "json",
+            output_file: "output.pdf",
+            direct_download: 1,
+            cloud_storage: 1,
+            pdf_standard: "string",
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "X-API-KEY": "61b6Njk3Mjo3MDAwOnUyUVhJRGRkOUpkQ3RrcW0",
+            },
+          }
+        );
+        const { file } = response.data;
+
+        if (file) {
+          const { data, error } = await supabase
+            .from("uploads")
+            .update({ pdf: file })
+            .eq("uploadid", upload_id);
+
+          if (error) {
+            console.error("Error updating Supabase PDF column:", error.message);
+          } else {
+          }
+          const link = document.createElement("a");
+          link.href = file;
+          link.download = "output.pdf";
+          link.style.display = "none";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setPDFLink(file);
+        setPDFLoading(false);
+      } else {
+        const pdfLink = supabaseData.pdf;
+        const link = document.createElement("a");
+        link.href = pdfLink;
+        link.download = "output.pdf";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setPDFLink(pdfLink);
+        setPDFLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creating PDF:", error);
+      setPDFLoading(false);
+    }
+  };
+
   const handleUrlSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setAIResponse("");
+    setFileAIResponse("");
+    setUrlUploadId("");
+    setFileUploadId("");
+
     if (!url) return;
 
     try {
       setURlLoading(true);
-      const user = await supabase.auth.getUser();
-      const user_id = user.data.user?.id;
 
-      if (!user_id) {
+      if (!userID) {
         toast.error("User not authenticated");
         return;
       }
-
       const upload_id = uuidv4();
-
+      setUrlUploadId(upload_id);
       const { data, error } = await supabase.from("uploads").insert([
         {
           uploadid: upload_id,
-          user_id,
+          user_id: userID,
           url,
           type: "url",
         },
       ]);
-
       if (error) {
         toast.error(error.message);
         console.error("Error saving URL:", error);
       } else {
-        await handleOpenAICall(url);
+        await handleOpenAICall(url, upload_id);
         setUploadedFiles((prevFiles) => [...prevFiles, url]);
       }
     } catch (error) {
@@ -171,20 +206,21 @@ function Upload() {
       setURlLoading(false);
     }
   };
+
   const handleFileSubmit = async (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    setAIResponse("");
     setFileAIResponse("");
+    setUrlUploadId("");
+    setFileUploadId("");
 
     if (files.length > 0) {
       try {
         setFileLoading(true);
-        const user = await supabase.auth.getUser();
-        const user_id = user.data.user?.id;
-        if (!user_id) {
-          toast.error("User not authenticated");
-          return;
-        }
         const upload_id = uuidv4();
+        ("");
+        setFileUploadId(upload_id);
+
         for (const file of files) {
           const fileId = uuidv4();
           const { data: uploadData, error: uploadError } =
@@ -205,7 +241,7 @@ function Upload() {
                 .insert([
                   {
                     uploadid: upload_id,
-                    user_id,
+                    user_id: userID,
                     url: publicUrlData.publicUrl,
                     type: "file",
                   },
@@ -229,100 +265,25 @@ function Upload() {
           method: "POST",
           body: data,
         });
+
         const result = await res.json();
         const uploadId = result.upload.vector_store_id;
 
         const customAssistantID = uuidv4();
 
-        const assistant = await openai.beta.assistants.create({
-          name: customAssistantID,
-          instructions: `You are a file analyzer. You will be provided with different files in the vector store. You will have to read every file and generate one altogether report based on the given content in <structure> tag. In the <structure> tag we are using 'recommendations' too, but those recommendations are only instructions for you and should not be a part of response. Also we are using 'description' in the <structure> tag, we donot need that description in our response, it is for your instructions only. The content under the headings under key elements are just instructions for the response. DONOT write any Summary, just follow the structure given. DONOT use html or any other symbols at the starting or at the end. Remove the heading 'Key Elements' from response. All of your response wil be in html tags. Follow the instructions in the <formatting> tag for the html tag formatting of the response document.
-                          
-                    <structure>
-                    AI Content X-Ray Report
-                    Introduction
-                    The AI Content X-Ray tool provides an in-depth analysis of documents or web pages, offering insights and potential improvements across three key areas: Accessibility and Readability, Effectiveness and Sentiment, and Structure.
-                    1. Accessibility and Readability
-
-                    Document Name
-                    What are the file names of documents being analyzed?
-
-                    Description
-                    Accessibility and readability focus on how easily a document can be read and understood by its audience. This dimension assesses the complexity of the language used and the required proficiency level in English.
-                    Key Elements
-                    - Readability Level: Tell that how challenging the text is to read and comprehend?
-                    - Language Complexity: What is the sophistication of the vocabulary and sentence structure?
-                    - User Understanding: What is the level of English proficiency needed for the reader to fully grasp the content?
-                    Recommendations
-                    - Simplify complex sentences and use common vocabulary to enhance understanding.
-                    - Use readability tools to gauge the text's difficulty and adjust accordingly.
-                    - Incorporate clear headings and subheadings to guide the reader.
-                    2. Effectiveness and Sentiment
-                    Description
-                    Effectiveness and sentiment measure how persuasive and impactful the document is. This dimension evaluates how well the message is conveyed and the emotional response it elicits from the reader.
-                    Key Elements
-                    - Persuasiveness: What is the ability of the document to convince and engage the reader?
-                    - Message Clarity: Tell me how clearly the main ideas are presented?
-                    - Emotional Impact: How much is the use of metaphors and other rhetorical devices to evoke emotions?
-
-                    Recommendations
-                    - Strengthen key arguments with evidence and clear examples.
-                    - Ensure the message is concise and to the point, avoiding unnecessary jargon.
-                    - Use metaphors and analogies effectively to create a stronger emotional connection.
-                    3. Structure
-                    Description
-                    The structure dimension examines the visual and organizational aspects of the document. It focuses on how visuals and layout contribute to readability and comprehension.
-                    Key Elements
-                    - Visual Aids: How much is the use of images, graphs, and charts to support the text?
-                    - Document Layout:What is the overall organization and flow of the content?
-                    - Clarity of Visuals: Tell me how well the visual elements aid in understanding the text?
-                    Recommendations
-                    - Incorporate relevant visuals to break up text and illustrate key points.
-                    - Use bullet points and numbered lists for better organization.
-                    - Ensure that all visual elements are clear and directly related to the content they support.
-                    </structure>
-
-                    <formatting>
-                 The tags in which you need to write your response are given below:
-                 ***Start from the <h1> tag***
-                1-AI Content X-Ray Report:should be inside <h1>tag
-                2-Introduction:should be inside <h2> tag
-                3-The content in introduction should be in <p> tag.
-                4-Headings with numbers should be in <h3> tag.
-                6-Headings inside key elements should be in <h4> tag.
-                5-The response under those headings should be inside <p> tag.
-                    </formatting>`,
-          model: "gpt-4o",
-          tools: [{ type: "file_search" }],
-          tool_resources: {
-            file_search: { vector_store_ids: [uploadId] },
-          },
+        const fileResponse = await fetch("api/assistant_create", {
+          method: "POST",
+          body: JSON.stringify({
+            customAssistantID,
+            uploadId,
+          }),
         });
 
-        const thread = await openai.beta.threads.create({
-          messages: [
-            {
-              role: "user",
-              content: "Make one report of all files. ",
-            },
-          ],
-        });
-        const stream = openai.beta.threads.runs
-          .stream(thread.id, {
-            assistant_id: assistant.id,
-          })
-
-          .on("messageDone", async (event) => {
-            if (event.content[0].type === "text") {
-              const { text } = event.content[0];
-              const { annotations } = text;
-
-              const citations: string[] = [];
-              setFileAIResponse(text.value);
-              setFileLoading(false);
-              setFiles([]);
-            }
-          });
+        const fileResult = await fileResponse.json();
+        await updateSupabase(upload_id, fileResult.report);
+        setFileAIResponse(fileResult.report);
+        setFileLoading(false);
+        setFiles([]);
       } catch (error) {
         setFileLoading(false);
         setFiles([]);
@@ -331,6 +292,14 @@ function Upload() {
       }
     }
   };
+  useEffect(() => {
+    const handleUser = async () => {
+      const user = await supabase.auth.getUser();
+      setUserEmail(user.data.user?.email);
+      setUserID(user.data.user?.id);
+    };
+    handleUser();
+  }, []);
   return (
     <div className="text-black">
       <div className="bg-white px-10 py-10 rounded-lg">
@@ -396,6 +365,25 @@ function Upload() {
         <p className="text-xs font-light mb-5">Enter your website URL here.</p>
         {aiResponse && (
           <div className="text-sm shadow-md overflow-y-auto px-7 py-5 my-3 rounded-lg">
+            <button
+              className={`${
+                pdfLoading ? "opacity-50 pointer-events-none" : ""
+              } bg-theme flex items-center justify-center gap-1 text-white px-3 py-2 rounded-md mb-4 hover:bg-themedark transition-all duration-150`}
+              onClick={() => createPdfAsync(aiResponse, urlUploadId)}
+            >
+              {" "}
+              {pdfLoading ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                  Exporting
+                </>
+              ) : (
+                <>
+                  <FaRegFilePdf />
+                  Export to PDF
+                </>
+              )}
+            </button>
             <div
               className="aiResponse"
               dangerouslySetInnerHTML={{ __html: aiResponse }}
@@ -500,6 +488,25 @@ function Upload() {
             )}
             {fileAIResponse && (
               <div className="text-sm shadow-md overflow-y-auto px-7 py-5 my-3 rounded-lg">
+                <button
+                  className={`${
+                    pdfLoading ? "opacity-50 pointer-events-none" : ""
+                  } bg-theme flex items-center justify-center gap-1 text-white px-3 py-2 rounded-md mb-4 hover:bg-themedark transition-all duration-150`}
+                  onClick={() => createPdfAsync(fileAIResponse, fileUploadId)}
+                >
+                  {" "}
+                  {pdfLoading ? (
+                    <>
+                      <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                      Exporting
+                    </>
+                  ) : (
+                    <>
+                      <FaRegFilePdf />
+                      Export to PDF
+                    </>
+                  )}
+                </button>
                 <div
                   className="aiResponse"
                   dangerouslySetInnerHTML={{ __html: fileAIResponse }}
