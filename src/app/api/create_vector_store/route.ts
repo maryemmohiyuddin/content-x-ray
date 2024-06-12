@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
   const openai = new OpenAI({
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY,
   });
 
   try {
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       { files: files }
     );
 
-    console.log("uploading", upload);
     return NextResponse.json({ success: true, upload });
   } catch (error) {
     console.error("Error during upload:", error);
