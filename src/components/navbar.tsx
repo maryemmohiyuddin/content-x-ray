@@ -37,8 +37,8 @@ function Navbar() {
       <nav className="bg-white w-full px-14 z-20 top-0 shadow-sm start-0 text-black ">
         <div className="flex justify-between items-center">
           <div className="flex justify-center items-center gap-2">
-            <img src="logo.png" alt="" className="w-8 h-8" />
-            <p className="text-xl font-semibold">ImplementAI</p>
+            <img src="header-logo.svg" alt="" className="w-36" />
+            {/* <p className="text-xl font-semibold">ImplementAI</p> */}
           </div>
           <div>
             <ul className="flex space-x-6">
