@@ -12,7 +12,6 @@ import axios from "axios";
 import { FaRegFilePdf } from "react-icons/fa";
 import OpenAI from "openai";
 
-
 function Upload() {
   const [url, setUrl] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -30,10 +29,10 @@ function Upload() {
   const [fileAIResponse, setFileAIResponse] = useState<string>("");
   const [urlUploadId, setUrlUploadId] = useState<string>("");
   const [fileUploadId, setFileUploadId] = useState<string>("");
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+  const openai = new OpenAI({
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -237,7 +236,7 @@ const openai = new OpenAI({
                 .from("content-files")
                 .upload(`/${fileId}_${file.name}`, file);
 
-            console.log("upload", uploadError, uploadData);
+            // console.log("upload", uploadError, uploadData);
 
             if (uploadError) {
               setFiles([]);
@@ -260,7 +259,7 @@ const openai = new OpenAI({
                   type: "file",
                 },
               ]);
-              console.log("update supabase", updateupabase);
+              // console.log("update supabase", updateupabase);
 
               // if (insertError) {
               //   setFiles([]);
@@ -287,21 +286,21 @@ const openai = new OpenAI({
         files.forEach((file) => data.append("files", file));
 
         try {
-          
-    const customVectorID = uuidv4();
-    let vectorStore = await openai.beta.vectorStores.create({
-      name: customVectorID,
-    });
+          const customVectorID = uuidv4();
+          let vectorStore = await openai.beta.vectorStores.create({
+            name: customVectorID,
+          });
 
-    const upload = await openai.beta.vectorStores.fileBatches.uploadAndPoll(
-      vectorStore.id,
-      { files: files }
-    );
+          const upload =
+            await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+              vectorStore.id,
+              { files: files }
+            );
           // const res = await fetch("/api/create_vector_store", {
           //   method: "POST",
           //   body: data,
           // });
-          console.log("upload", upload);
+          // console.log("upload", upload);
 
           // if (!res.ok) {
           //   setFiles([]);
@@ -324,7 +323,7 @@ const openai = new OpenAI({
                 uploadId,
               }),
             });
-            console.log("fileResponse", fileResponse);
+            // console.log("fileResponse", fileResponse);
             if (!fileResponse.ok) {
               toast.error("Error during file upload. Please try again");
               setFiles([]);
