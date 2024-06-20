@@ -42,7 +42,6 @@ export default function RootLayout({
        
         <meta property="og:image" content="/opengraph.png" />
         <meta name="twitter:card" content="summary_large_image" />
-       
         <meta name="twitter:image" content="/twitter.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
