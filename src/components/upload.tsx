@@ -10,6 +10,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { FaRegFilePdf } from "react-icons/fa";
+import OpenAI from "openai";
+
 
 function Upload() {
   const [url, setUrl] = useState("");
@@ -28,6 +30,10 @@ function Upload() {
   const [fileAIResponse, setFileAIResponse] = useState<string>("");
   const [urlUploadId, setUrlUploadId] = useState<string>("");
   const [fileUploadId, setFileUploadId] = useState<string>("");
+const openai = new OpenAI({
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -281,19 +287,29 @@ function Upload() {
         files.forEach((file) => data.append("files", file));
 
         try {
-          const res = await fetch("/api/create_vector_store", {
-            method: "POST",
-            body: data,
-          });
-          console.log("res", res);
+          
+    const customVectorID = uuidv4();
+    let vectorStore = await openai.beta.vectorStores.create({
+      name: customVectorID,
+    });
 
-          if (!res.ok) {
-            throw new Error("Failed to create vector store");
-            setFiles([]);
-          }
+    const upload = await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+      vectorStore.id,
+      { files: files }
+    );
+          // const res = await fetch("/api/create_vector_store", {
+          //   method: "POST",
+          //   body: data,
+          // });
+          console.log("upload", upload);
 
-          const result = await res.json();
-          const uploadId = result.upload.vector_store_id;
+          // if (!res.ok) {
+          //   setFiles([]);
+          //   throw new Error("Failed to create vector store");
+          // }
+
+          // const result = await res.json();
+          const uploadId = upload.vector_store_id;
 
           const customAssistantID = uuidv4();
 
