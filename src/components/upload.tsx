@@ -232,6 +232,8 @@ function Upload() {
                 .upload(`/${fileId}_${file.name}`, file);
 
             if (uploadError) {
+        setFiles([]);
+
               throw new Error(
                 `Error uploading file: ${uploadError.message} ${file.name}`
               );
@@ -254,6 +256,8 @@ function Upload() {
                 ]);
 
               if (insertError) {
+        setFiles([]);
+
                 throw new Error(
                   `Error saving file URL: ${insertError.message} ${file.name}`
                 );
@@ -266,6 +270,7 @@ function Upload() {
             }
           } catch (error) {
             toast.error("Error during file upload. Please try again");
+        setFiles([]);
 
             console.error(error);
           }
@@ -282,6 +287,8 @@ function Upload() {
 
           if (!res.ok) {
             throw new Error("Failed to create vector store");
+        setFiles([]);
+
           }
 
           const result = await res.json();
@@ -303,6 +310,7 @@ function Upload() {
 
             if (!fileResponse.ok) {
               toast.error("Error during file upload. Please try again");
+        setFiles([]);
 
               throw new Error("Failed to create assistant");
             }
@@ -312,11 +320,13 @@ function Upload() {
             setFileAIResponse(fileResult.report);
           } catch (error) {
             toast.error("Error during file upload. Please try again");
+        setFiles([]);
 
             throw new Error(`Error creating assistant`);
           }
         } catch (error) {
           toast.error("Error during file upload. Please try again");
+        setFiles([]);
 
           throw new Error(`Error during vector store creation`);
         }
