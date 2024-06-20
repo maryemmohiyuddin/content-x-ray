@@ -254,7 +254,7 @@ function Upload() {
                   type: "file",
                 },
               ]);
-              console.log("update supabase", updateSupabase);
+              console.log("update supabase", updateupabase);
 
               // if (insertError) {
               //   setFiles([]);
@@ -309,21 +309,17 @@ function Upload() {
               }),
             });
             console.log("fileResponse", fileResponse);
-
             if (!fileResponse.ok) {
               toast.error("Error during file upload. Please try again");
               setFiles([]);
-
               throw new Error("Failed to create assistant");
             }
-
             const fileResult = await fileResponse.json();
             await updateSupabase(upload_id, fileResult.report);
             setFileAIResponse(fileResult.report);
           } catch (error) {
             toast.error("Error during file upload. Please try again");
             setFiles([]);
-
             throw new Error(`Error creating assistant`);
           }
         } catch (error) {
