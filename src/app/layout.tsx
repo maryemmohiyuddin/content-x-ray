@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   metadataBase: new URL("https://content-x-ray.implementai.net/"),
-  title: "Instantly analyze your documents for deeper insights.",
+  title: "Content X Ray",
   description:
     "Content X Ray - Instantly analyze your documents for deeper insights.",
   openGraph: {
