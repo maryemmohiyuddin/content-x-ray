@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
 
     const assistant = await openai.beta.assistants.create({
       name: requestData.customAssistantID,
+      
       instructions: `You are a file analyzer. You will be provided with different files in the vector store. You will have to read every file and generate one altogether report based on the given content in <structure> tag. In the <structure> tag we are using 'recommendations' too, but those recommendations are only instructions for you and should not be a part of response. Also we are using 'description' in the <structure> tag, we donot need that description in our response, it is for your instructions only. The content under the headings under key elements are just instructions for the response. DONOT write any Summary, just follow the structure given. DONOT use html or any other symbols at the starting or at the end. Remove the heading 'Key Elements' from response. All of your response wil be in html tags. Follow the instructions in the <formatting> tag for the html tag formatting of the response document.
       
                     <structure>
