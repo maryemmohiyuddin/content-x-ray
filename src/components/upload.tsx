@@ -78,10 +78,12 @@ function Upload() {
         setAIResponse(data.report);
         await updateSupabase(upload_id, data.report);
       } else {
+        toast.error("Error during OpenAI Call");
         console.error("Failed to call OpenAI:", response.statusText);
       }
     } catch (error) {
       console.error("Error:", error);
+      toast.error("Error during OpenAI Call");
     }
   };
 
@@ -96,6 +98,7 @@ function Upload() {
         .single();
 
       if (supabaseError) {
+        toast.error("Error during PDF Creation. Please try again");
         console.error(
           "Error fetching data from Supabase:",
           supabaseError.message
@@ -161,6 +164,7 @@ function Upload() {
         setPDFLoading(false);
       }
     } catch (error) {
+      toast.error("Error during PDF Creation. Please try again");
       console.error("Error creating PDF:", error);
       setPDFLoading(false);
     }
@@ -193,20 +197,19 @@ function Upload() {
         },
       ]);
       if (error) {
-        toast.error(error.message);
+        toast.error("Error during analyzing url");
         console.error("Error saving URL:", error);
       } else {
         await handleOpenAICall(url, upload_id);
         setUploadedFiles((prevFiles) => [...prevFiles, url]);
       }
     } catch (error) {
-      toast.error("Error during URL save");
+      toast.error("Error during analyzing url");
       console.error("Error during URL save:", error);
     } finally {
       setURlLoading(false);
     }
   };
-
   const handleFileSubmit = async (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setAIResponse("");
@@ -218,23 +221,26 @@ function Upload() {
       try {
         setFileLoading(true);
         const upload_id = uuidv4();
-        ("");
         setFileUploadId(upload_id);
 
         for (const file of files) {
           const fileId = uuidv4();
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage
-              .from("content-files")
-              .upload(`/${fileId}_${file.name}`, file);
+          try {
+            const { data: uploadData, error: uploadError } =
+              await supabase.storage
+                .from("content-files")
+                .upload(`/${fileId}_${file.name}`, file);
 
-          if (uploadError) {
-            toast.error(uploadError.message + " " + file.name);
-            console.error("Error uploading file:", uploadError);
-          } else {
-            const { data: publicUrlData } = supabase.storage
+            if (uploadError) {
+              throw new Error(
+                `Error uploading file: ${uploadError.message} ${file.name}`
+              );
+            }
+
+            const { data: publicUrlData } = await supabase.storage
               .from("content-files")
               .getPublicUrl(`/${fileId}_${file.name}`);
+
             if (publicUrlData.publicUrl) {
               const { data: insertData, error: insertError } = await supabase
                 .from("uploads")
@@ -246,9 +252,11 @@ function Upload() {
                     type: "file",
                   },
                 ]);
+
               if (insertError) {
-                toast.error(insertError.message + " " + file.name);
-                console.error("Error saving file URL:", insertError);
+                throw new Error(
+                  `Error saving file URL: ${insertError.message} ${file.name}`
+                );
               } else {
                 setUploadedFiles((prevFiles) => [
                   ...prevFiles,
@@ -256,42 +264,74 @@ function Upload() {
                 ]);
               }
             }
+          } catch (error) {
+            toast.error("Error during file upload. Please try again");
+
+            console.error(error);
           }
         }
+
         const data = new FormData();
         files.forEach((file) => data.append("files", file));
 
-        const res = await fetch("api/create_vector_store", {
-          method: "POST",
-          body: data,
-        });
+        try {
+          const res = await fetch("/api/create_vector_store", {
+            method: "POST",
+            body: data,
+          });
 
-        const result = await res.json();
-        const uploadId = result.upload.vector_store_id;
+          if (!res.ok) {
+            throw new Error("Failed to create vector store");
+          }
 
-        const customAssistantID = uuidv4();
+          const result = await res.json();
+          const uploadId = result.upload.vector_store_id;
 
-        const fileResponse = await fetch("api/assistant_create", {
-          method: "POST",
-          body: JSON.stringify({
-            customAssistantID,
-            uploadId,
-          }),
-        });
+          const customAssistantID = uuidv4();
 
-        const fileResult = await fileResponse.json();
-        await updateSupabase(upload_id, fileResult.report);
-        setFileAIResponse(fileResult.report);
+          try {
+            const fileResponse = await fetch("/api/assistant_create", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                customAssistantID,
+                uploadId,
+              }),
+            });
+
+            if (!fileResponse.ok) {
+              toast.error("Error during file upload. Please try again");
+
+              throw new Error("Failed to create assistant");
+            }
+
+            const fileResult = await fileResponse.json();
+            await updateSupabase(upload_id, fileResult.report);
+            setFileAIResponse(fileResult.report);
+          } catch (error) {
+            toast.error("Error during file upload. Please try again");
+
+            throw new Error(`Error creating assistant`);
+          }
+        } catch (error) {
+          toast.error("Error during file upload. Please try again");
+
+          throw new Error(`Error during vector store creation`);
+        }
+
         setFileLoading(false);
         setFiles([]);
       } catch (error) {
         setFileLoading(false);
         setFiles([]);
-        toast.error("Error during file analyze");
+        toast.error("Error during file upload. Please try again");
         console.error("Error during file analyze:", error);
       }
     }
   };
+
   useEffect(() => {
     const handleUser = async () => {
       const user = await supabase.auth.getUser();
