@@ -231,6 +231,8 @@ function Upload() {
                 .from("content-files")
                 .upload(`/${fileId}_${file.name}`, file);
 
+            console.log("upload", uploadError, uploadData);
+
             if (uploadError) {
               setFiles([]);
 
@@ -244,30 +246,28 @@ function Upload() {
               .getPublicUrl(`/${fileId}_${file.name}`);
 
             if (publicUrlData.publicUrl) {
-              const { data: insertData, error: insertError } = await supabase
-                .from("uploads")
-                .insert([
-                  {
-                    uploadid: upload_id,
-                    user_id: userID,
-                    url: publicUrlData.publicUrl,
-                    type: "file",
-                  },
-                ]);
-              console.log("update supabase", insertData, insertError);
+              const updateupabase = await supabase.from("uploads").insert([
+                {
+                  uploadid: upload_id,
+                  user_id: userID,
+                  url: publicUrlData.publicUrl,
+                  type: "file",
+                },
+              ]);
+              console.log("update supabase", updateSupabase);
 
-              if (insertError) {
-                setFiles([]);
+              // if (insertError) {
+              //   setFiles([]);
 
-                throw new Error(
-                  `Error saving file URL: ${insertError.message} ${file.name}`
-                );
-              } else {
-                setUploadedFiles((prevFiles) => [
-                  ...prevFiles,
-                  publicUrlData.publicUrl,
-                ]);
-              }
+              //   throw new Error(
+              //     `Error saving file URL: ${insertError.message} ${file.name}`
+              //   );
+              // } else {
+              //   setUploadedFiles((prevFiles) => [
+              //     ...prevFiles,
+              //     publicUrlData.publicUrl,
+              //   ]);
+              // }
             }
           } catch (error) {
             toast.error("Error during file upload. Please try again");
@@ -285,6 +285,7 @@ function Upload() {
             method: "POST",
             body: data,
           });
+          console.log("res", res);
 
           if (!res.ok) {
             throw new Error("Failed to create vector store");
@@ -307,6 +308,7 @@ function Upload() {
                 uploadId,
               }),
             });
+            console.log("fileResponse", fileResponse);
 
             if (!fileResponse.ok) {
               toast.error("Error during file upload. Please try again");
