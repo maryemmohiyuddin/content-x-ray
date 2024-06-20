@@ -48,7 +48,6 @@ export default function RootLayout({
         <title>{metadata.title}</title>
         <meta name="description" content={metadata.description} />
         <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="icon" href="/favicon.ico" />
         {/* Additional meta tags for SEO */}
         {/* Open Graph meta tags */}
         <meta property="og:type" content={metadata.openGraph.type} />
