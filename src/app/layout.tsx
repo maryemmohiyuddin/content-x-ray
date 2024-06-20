@@ -5,18 +5,20 @@ import { Inter } from "next/font/google";
 // Setup Inter font (assuming it's correctly imported)
 const inter = Inter({ subsets: ["latin"] });
 
-// Define metadata for SEO and social sharing
 export const metadata = {
-  title: "Content X Ray",
-  description: "Instantly analyze your documents for deeper insights.",
+  metadataBase: new URL("https://content-x-ray.implementai.net/"),
+  title: "Instantly analyze your documents for deeper insights.",
+  description:
+    "Content X Ray - Instantly analyze your documents for deeper insights.",
   openGraph: {
     type: "website",
     site_name: "Content X Ray",
-    title: "Content X Ray",
-    description: "Instantly analyze your documents for deeper insights.",
+    title: "Instantly analyze your documents for deeper insights.",
+    description:
+      "Content X Ray - Instantly analyze your documents for deeper insights.",
     images: [
       {
-        url: "/opengraph.png", // Update with your actual image URL
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
       },
@@ -24,11 +26,12 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Content X Ray",
-    description: "Instantly analyze your documents for deeper insights.",
+    title: "Instantly analyze your documents for deeper insights.",
+    description:
+      "Content X Ray - Instantly analyze your documents for deeper insights.",
     images: [
       {
-        url: "/opengraph.png", // Update with your actual image URL
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
       },
@@ -43,8 +46,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className} bg-gray-50`}>{children}</body>
