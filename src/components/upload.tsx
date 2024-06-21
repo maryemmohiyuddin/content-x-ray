@@ -112,11 +112,22 @@ function Upload() {
         return;
       }
       if (!supabaseData?.pdf) {
+        // Function to remove all \n characters from a string
+        const removeNewLines = (text: string): string => {
+          console.log("removing linres", text);
+          return text.replace(/\n/g, " ");
+        };
+        console.log("removed linres", removeNewLines);
+
+        // Assuming fileResult has a 'description' property
+        const fileResultt = removeNewLines(report);
+        console.log("Updated fileresult", fileResultt);
+
         const response = await axios.post(
           "https://api.craftmypdf.com/v1/create",
           {
-            data: { body: report, person_name: userEmail },
-            template_id: "06a77b230de5b7f6",
+            data: { body: fileResultt, person_name: userEmail },
+            template_id: "8fa77b2305561798",
             expiration: 60,
             is_cmyk: false,
             load_data_from: null,
@@ -296,6 +307,7 @@ function Upload() {
               vectorStore.id,
               { files: files }
             );
+          console.log("cvector ", customVectorID, upload);
           // const res = await fetch("/api/create_vector_store", {
           //   method: "POST",
           //   body: data,
@@ -309,6 +321,7 @@ function Upload() {
 
           // const result = await res.json();
           const uploadId = upload.vector_store_id;
+          console.log("id", uploadId);
 
           const customAssistantID = uuidv4();
 
@@ -323,6 +336,8 @@ function Upload() {
                 uploadId,
               }),
             });
+            console.log("fileres", fileResponse);
+
             // console.log("fileResponse", fileResponse);
             if (!fileResponse.ok) {
               toast.error("Error during file upload. Please try again");
@@ -330,6 +345,8 @@ function Upload() {
               throw new Error("Failed to create assistant");
             }
             const fileResult = await fileResponse.json();
+            console.log("fileres", fileResult);
+
             await updateSupabase(upload_id, fileResult.report);
             setFileAIResponse(fileResult.report);
           } catch (error) {
