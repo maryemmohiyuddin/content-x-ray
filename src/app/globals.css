@@ -42,18 +42,27 @@ body {
 div[data-slot="listbox"] {
   color: black !important;
 }
-.aiResponse h1{
-  @apply text-[23px] mt-2 mb-5 font-semibold
+.aiResponse h1 {
+  @apply text-[23px] mt-2 mb-5 font-semibold;
 }
-.aiResponse h2{
-  @apply text-[20px] my-1 font-semibold
+.aiResponse h2 {
+  @apply text-[20px] my-1 font-semibold;
 }
-.aiResponse h3{
-  @apply text-[17px] mt-1 mb-3 font-semibold
+.aiResponse h3 {
+  @apply text-[17px] mt-1 mb-3 font-semibold;
 }
-.aiResponse h4{
-  @apply text-[15px] my-1 font-semibold
+.aiResponse h4 {
+  @apply text-[15px] my-1 font-semibold;
 }
-.aiResponse p{
-  @apply mb-2
+.aiResponse p {
+  @apply mb-2;
+}
+tr {
+  border-bottom: 1px solid black;
+}
+table {
+  border: 1px solid black;
+}
+th,td{
+  border-right:1px solid black
 }
