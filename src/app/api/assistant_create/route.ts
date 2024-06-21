@@ -61,6 +61,7 @@ Use this prompt to generate a detailed analysis and actionable recommendations f
                 5-The response under those headings should be inside <p> tag.
                     </formatting>
                     `,
+
       model: "gpt-4o",
       tools: [{ type: "file_search" }],
       tool_resources: {
