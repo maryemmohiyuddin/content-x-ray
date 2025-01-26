@@ -18,6 +18,8 @@ export async function POST(req: any, res: any) {
     // ;
 
     //       // Extract text
+
+  
     //       const text = pdf.getRawTextContent();
 
     res.status(200).json({ pdf });
